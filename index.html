@@ -284,10 +284,20 @@ h5 { margin-bottom: 4px; font-size: 13px; }
 <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); margin-top:10px;">
 <div><label>كود المنتج</label><input type="text" id="pp-code"></div>
 <div><label>تكلفة الشراء</label><input type="number" id="pp-cost" value="0" min="0" oninput="autoCalcPpPrice()"></div>
-<div><label>هامش الربح %</label><input type="number" id="pp-margin" value="0" min="0" oninput="autoCalcPpPrice()"></div>
+<div><label>الربح (رقم يضاف للتكلفة)</label><input type="number" id="pp-margin" value="0" min="0" oninput="autoCalcPpPrice()"></div>
 <div><label>سعر البيع</label><input type="number" id="pp-price" value="0" min="0"></div>
 </div>
 <button onclick="saveProductPricing()" style="margin-top:10px;">💾 حفظ الكود/السعر/الهامش</button>
+</div>
+<div class="card">
+<h3 style="color:var(--accent); margin-bottom:15px;">📄 تصدير PDF: المنتجات والأكواد والرصيد والمباع</h3>
+<p style="color:var(--muted); font-size:12px; margin-bottom:10px;">الرصيد = المتاح حالياً. المباع = إجمالي المبيعات المسجلة (اترك التاريخ فاضي لكل الفترات).</p>
+<div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));">
+<div><label>المخزن</label><select id="pe-wh"></select></div>
+<div><label>المباع من تاريخ (اختياري)</label><input type="date" id="pe-from"></div>
+<div><label>إلى تاريخ (اختياري)</label><input type="date" id="pe-to"></div>
+</div>
+<div class="btn-group" style="margin-top:12px;"><button class="btn-ghost" onclick="exportProductsReport('print')">🖨️ طباعة</button><button onclick="exportProductsReport('pdf')">📄 حفظ PDF</button></div>
 </div>
 </div>
 </div>
@@ -725,7 +735,8 @@ h5 { margin-bottom: 4px; font-size: 13px; }
 <h3 style="color:var(--accent)">➕ إضافة منتج لليستة</h3>
 <div class="grid">
 <div><label>الليستة *</label><select id="pli-list"></select></div>
-<div><label>المنتج *</label><select id="pli-prod"></select></div>
+<div><label>كود المنتج</label><input type="text" id="pli-code" list="prod-codes-datalist" placeholder="اكتب الكود أو اختر" oninput="onListCodeInput()"></div>
+<div><label>المنتج *</label><select id="pli-prod" onchange="onListProdChange()"></select></div>
 </div>
 <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); margin-top:10px;">
 <div><label>السعر</label><input type="number" id="pli-price" value="0" min="0"></div>
@@ -739,6 +750,7 @@ h5 { margin-bottom: 4px; font-size: 13px; }
 <div class="grid">
 <div><label>اختر الليستة</label><select id="plb-list" onchange="loadProductListItems()"></select></div>
 </div>
+<div class="btn-group"><button class="btn-ghost" onclick="exportProductList('print')">🖨️ طباعة</button><button class="btn-ghost" onclick="exportProductList('pdf')">📄 حفظ PDF</button></div>
 <button class="btn-danger" onclick="deleteProductList()">🗑️ حذف الليستة دي بالكامل (مع كل منتجاتها)</button>
 <div id="plb-results" style="margin-top:12px;"></div>
 </div>
@@ -746,7 +758,7 @@ h5 { margin-bottom: 4px; font-size: 13px; }
 </div>
 </div>
 <div class="modal" id="modal-wh" onclick="if(event.target===this)closeModal('modal-wh')"><div class="card" style="max-width:450px;"><h3>مخزن جديد</h3><input type="text" id="new-wh" placeholder="اسم المخزن"><button onclick="saveWh()">حفظ</button></div></div>
-<div class="modal" id="modal-prod" onclick="if(event.target===this)closeModal('modal-prod')"><div class="card" style="max-width:450px;"><h3>منتج جديد</h3><input type="text" id="new-pr" placeholder="اسم المنتج"><input type="text" id="new-pr-code" placeholder="كود المنتج (اختياري)"><input type="number" id="new-pr-c" placeholder="كرتونة مبدئية"><input type="number" id="new-pr-p" placeholder="قطعة مبدئية"><div class="grid-2" style="margin-top:8px;"><div><label style="font-size:12px;">تكلفة الشراء</label><input type="number" id="new-pr-cost" value="0" min="0" oninput="autoCalcNewProdPrice()"></div><div><label style="font-size:12px;">هامش الربح %</label><input type="number" id="new-pr-margin" value="0" min="0" oninput="autoCalcNewProdPrice()"></div></div><div><label style="font-size:12px;">سعر البيع</label><input type="number" id="new-pr-price" value="0" min="0"></div><button onclick="saveProd()">حفظ</button></div></div>
+<div class="modal" id="modal-prod" onclick="if(event.target===this)closeModal('modal-prod')"><div class="card" style="max-width:450px;"><h3>منتج جديد</h3><input type="text" id="new-pr" placeholder="اسم المنتج"><input type="text" id="new-pr-code" placeholder="كود المنتج (اختياري)"><input type="number" id="new-pr-c" placeholder="كرتونة مبدئية"><input type="number" id="new-pr-p" placeholder="قطعة مبدئية"><div class="grid-2" style="margin-top:8px;"><div><label style="font-size:12px;">تكلفة الشراء</label><input type="number" id="new-pr-cost" value="0" min="0" oninput="autoCalcNewProdPrice()"></div><div><label style="font-size:12px;">الربح (رقم يضاف للتكلفة)</label><input type="number" id="new-pr-margin" value="0" min="0" oninput="autoCalcNewProdPrice()"></div></div><div><label style="font-size:12px;">سعر البيع</label><input type="number" id="new-pr-price" value="0" min="0"></div><button onclick="saveProd()">حفظ</button></div></div>
 <div class="modal" id="modal-cust" onclick="if(event.target===this)closeModal('modal-cust')"><div class="card" style="max-width:450px;"><h3>عميل جديد</h3><input type="text" id="new-cu" placeholder="اسم العميل"><input type="number" id="new-cu-d" placeholder="مديونية افتتاحية"><button onclick="saveCust()">حفظ</button></div></div>
 <div class="modal" id="modal-delwh" onclick="if(event.target===this)closeModal('modal-delwh')"><div class="card" style="max-width:450px;"><h3 style="color:var(--danger)">🗑️ حذف مخزن</h3><p style="color:var(--muted); font-size:13px; margin:10px 0;">تحذير: هيتحذف المخزن وكل أرصدته. لا يمكن حذف المخزن الرئيسي.</p><select id="del-wh-select"></select><button class="btn-danger" onclick="deleteWarehouse()">تأكيد الحذف</button></div></div>
 <div class="modal" id="modal-delprod" onclick="if(event.target===this)closeModal('modal-delprod')"><div class="card" style="max-width:450px;"><h3 style="color:var(--danger)">🗑️ حذف منتج</h3><p style="color:var(--muted); font-size:13px; margin:10px 0;">تحذير: هيتحذف المنتج من كل المخازن نهائياً.</p><select id="del-pr-select"></select><button class="btn-danger" onclick="deleteProduct()">تأكيد الحذف</button></div></div>
@@ -1039,6 +1051,8 @@ const whOpts = db.warehouses.map(w => `<option value="${esc(w.name)}">${esc(w.na
 const whOptsWithAll = '<option value="">كل المخازن</option>' + whOpts;
 document.getElementById('s-warehouse').innerHTML = whOpts;
 document.getElementById('inv-wh').innerHTML = whOpts;
+const peWh = document.getElementById('pe-wh');
+if (peWh) { const keep = peWh.value; peWh.innerHTML = '<option value="">كل المخازن</option>' + whOpts; peWh.value = keep; }
 document.getElementById('stk-wh').innerHTML = whOpts;
 document.getElementById('del-wh-select').innerHTML = db.warehouses.filter(w => w.name !== MAIN_WH).map(w => `<option value="${esc(w.name)}">${esc(w.name)}</option>`).join('') || '<option value="">لا يوجد مخازن قابلة للحذف</option>';
 document.getElementById('ret-wh-src').innerHTML = whOpts;
@@ -1113,7 +1127,7 @@ document.getElementById('pp-price').value = p.price || 0;
 function autoCalcPpPrice() {
 const cost = num_(document.getElementById('pp-cost').value);
 const margin = num_(document.getElementById('pp-margin').value);
-document.getElementById('pp-price').value = (cost + (cost * margin / 100)).toFixed(2);
+document.getElementById('pp-price').value = (cost + margin).toFixed(2);
 }
 async function saveProductPricing() {
 const name = document.getElementById('pp-prod').value;
@@ -1473,18 +1487,32 @@ const min = num_(document.getElementById('inv-m').value);
 if (!product) return toast("اختر منتج", true);
 if (carton < 0 || piece < 0) return toast("لا يمكن إدخال كمية سالبة", true);
 if (carton === 0 && piece === 0) return toast("أدخل كمية أكبر من صفر", true);
+const fromMain = warehouse !== MAIN_WH;
 showL();
 try {
 const timestamp = new Date().toISOString();
+if (fromMain) {
+const { data: mainRow, error: mErr } = await withRetry(() => sb.from('inventory').select('carton,piece').eq('warehouse_name', MAIN_WH).eq('product_name', product).maybeSingle());
+if (mErr) throw mErr;
+const mc = num_(mainRow && mainRow.carton), mp = num_(mainRow && mainRow.piece);
+if (mc < carton || mp < piece) { hideL(); return toast(`رصيد المخزن الرئيسي غير كافٍ (كرتونة: ${mc} ، قطعة: ${mp})`, true); }
+const { error: dErr } = await withRetry(() => sb.rpc('rpc_adjust_inventory', {
+p_warehouse: MAIN_WH, p_product: product, p_carton_delta: -carton, p_piece_delta: -piece, p_min_alert: null
+}));
+if (dErr) throw new Error(dErr.message || "فشل الخصم من المخزن الرئيسي");
+}
 const { data, error } = await withRetry(() => sb.rpc('rpc_adjust_inventory', {
 p_warehouse: warehouse, p_product: product, p_carton_delta: carton, p_piece_delta: piece, p_min_alert: min
 }));
-if (error) throw new Error(error.message || "فشل تنفيذ عملية التوريد");
+if (error) {
+if (fromMain) { try { await sb.rpc('rpc_adjust_inventory', { p_warehouse: MAIN_WH, p_product: product, p_carton_delta: carton, p_piece_delta: piece, p_min_alert: null }); } catch (rb) {} }
+throw new Error(error.message || "فشل تنفيذ عملية التوريد");
+}
 const logId = (data && data.log_id) || null;
-saveLastInvAddition({ warehouse, product, carton, piece, min, timestamp, logId });
+saveLastInvAddition({ warehouse, product, carton, piece, min, timestamp, logId, fromMain });
 document.getElementById('inv-c').value = '0';
 document.getElementById('inv-p').value = '0';
-toast("تم التوريد بنجاح");
+toast(fromMain ? "تم التوريد وخصمه من المخزن الرئيسي" : "تم التوريد بنجاح");
 await refreshDataOnly();
 } catch (e) { errH(e); }
 }
@@ -1518,7 +1546,7 @@ container.innerHTML = `
 }
 async function undoLastInvAddition() {
 if (!lastInvAddition) return;
-const ok = await confirmModal(`التراجع نهائياً عن إضافة ${lastInvAddition.carton}ك و ${lastInvAddition.piece}ق من "${lastInvAddition.product}" في "${lastInvAddition.warehouse}"؟`);
+const ok = await confirmModal(`التراجع نهائياً عن إضافة ${lastInvAddition.carton}ك و ${lastInvAddition.piece}ق من "${lastInvAddition.product}" في "${lastInvAddition.warehouse}"${lastInvAddition.fromMain ? ' وإرجاعها للمخزن الرئيسي' : ''}؟`);
 if (!ok) return;
 showL();
 try {
@@ -1531,6 +1559,12 @@ p_warehouse: lastInvAddition.warehouse, p_product: lastInvAddition.product,
 p_carton_delta: -lastInvAddition.carton, p_piece_delta: -lastInvAddition.piece, p_min_alert: null
 }));
 if (error) throw new Error(error.message || "فشل التراجع");
+}
+if (lastInvAddition.fromMain) {
+const { error: bErr } = await withRetry(() => sb.rpc('rpc_adjust_inventory', {
+p_warehouse: MAIN_WH, p_product: lastInvAddition.product, p_carton_delta: lastInvAddition.carton, p_piece_delta: lastInvAddition.piece, p_min_alert: null
+}));
+if (bErr) throw new Error(bErr.message || "تم التراجع من مخزن العربية لكن فشل إرجاع الكمية للمخزن الرئيسي");
 }
 document.getElementById('inv-wh').value = lastInvAddition.warehouse;
 document.getElementById('inv-prod').value = lastInvAddition.product;
@@ -2704,7 +2738,7 @@ await refreshDataOnly();
 function autoCalcNewProdPrice() {
 const cost = num_(document.getElementById('new-pr-cost').value);
 const margin = num_(document.getElementById('new-pr-margin').value);
-document.getElementById('new-pr-price').value = (cost + (cost * margin / 100)).toFixed(2);
+document.getElementById('new-pr-price').value = (cost + margin).toFixed(2);
 }
 async function saveProd() {
 const name = str_(document.getElementById('new-pr').value);
@@ -3011,6 +3045,133 @@ document.getElementById('plist-name').value = '';
 await loadExpensesTabData();
 } catch (e) { errH(e); }
 }
+function onListProdChange() {
+const name = document.getElementById('pli-prod').value;
+const p = db.productMap[name];
+document.getElementById('pli-code').value = (p && p.code) || '';
+document.getElementById('pli-price').value = p ? num_(p.price) : 0;
+}
+function onListCodeInput() {
+const typed = str_(document.getElementById('pli-code').value).toLowerCase();
+if (!typed) return;
+const match = Object.keys(db.productMap).find(n => db.productMap[n].code && String(db.productMap[n].code).toLowerCase() === typed);
+if (match) {
+document.getElementById('pli-prod').value = match;
+document.getElementById('pli-price').value = num_(db.productMap[match].price);
+}
+}
+async function fetchAllRows_(buildQuery) {
+const pageSize = 1000;
+let from = 0, all = [];
+while (true) {
+const { data, error } = await withRetry(() => buildQuery().range(from, from + pageSize - 1));
+if (error) throw error;
+const rows = data || [];
+all = all.concat(rows);
+if (rows.length < pageSize) break;
+from += pageSize;
+}
+return all;
+}
+function buildProductsReportHTML(rows, meta, mode) {
+const fmt = n => (Math.round(num_(n) * 100) / 100).toString();
+const tot = rows.reduce((a, r) => ({ sc: a.sc + r.stockC, sp: a.sp + r.stockP, oc: a.oc + r.soldC, op: a.op + r.soldP }), { sc: 0, sp: 0, oc: 0, op: 0 });
+const body = rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.code || '-')}</td><td style="text-align:right">${esc(r.name)}</td><td>${fmt(r.stockC)}</td><td>${fmt(r.stockP)}</td><td>${fmt(r.soldC)}</td><td>${fmt(r.soldP)}</td></tr>`).join('');
+const dateStr = new Date().toLocaleDateString('ar-EG');
+const fname = 'تقرير_المنتجات_' + new Date().toISOString().slice(0, 10);
+return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>تقرير المنتجات</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+@page { size: A4 portrait; margin: 15mm 10mm; }
+body { background: white; color: black; font-size: 13px; line-height: 1.5; }
+.toolbar { background: #f5f5f5; padding: 10px; border-bottom: 1px solid #ddd; display: flex; gap: 10px; justify-content: center; position: sticky; top: 0; }
+.toolbar button { padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: bold; }
+.wrap { max-width: 800px; margin: 20px auto; padding: 20px; background: white; }
+.header { text-align: center; border-bottom: 3px double #000; padding-bottom: 15px; margin-bottom: 20px; }
+.header h1 { font-size: 28px; margin-bottom: 4px; }
+.title { font-size: 16px; color: #444; margin: 4px 0 12px; font-weight: 600; }
+.shop-row { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.shop-sub { font-size: 12px; color: #333; margin: 2px 0; }
+.date { font-size: 13px; color: #333; margin-top: 10px; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; text-align: center; }
+th, td { border: 1px solid #000; padding: 6px 5px; }
+th { background: #eee; }
+tfoot td { background: #f3f3f3; font-weight: bold; }
+tr { page-break-inside: avoid; }
+thead { display: table-header-group; }
+@media print { .toolbar { display: none !important; } .wrap { margin: 0; padding: 0; max-width: 100%; } }
+</style>
+</head>
+<body>
+<div class="toolbar"><button style="background:#2563eb;color:#fff" onclick="window.print()">🖨️ طباعة</button><button style="background:#16a34a;color:#fff" onclick="downloadPDF()">📄 حفظ PDF</button></div>
+<div class="wrap" id="report-content">
+<div class="header">
+<h1>أبو يونس</h1>
+<div class="title">تقرير المنتجات: الأكواد والرصيد والمباع</div>
+<div class="shop-row">
+<div><p class="shop-sub"><strong>الإدارة:</strong> علاء اسامة</p><p class="shop-sub"><strong>الهاتف:</strong> 01009253287 - 01114660510</p></div>
+<div><p class="shop-sub"><strong>العنوان:</strong> تلبنت قيصر بجوار مسجد سعد رسلان</p></div>
+</div>
+<p class="date">التاريخ: ${esc(dateStr)} — المخزن: ${esc(meta.wh)} — فترة المبيعات: ${esc(meta.period)}</p>
+</div>
+<table><thead><tr><th rowspan="2">م</th><th rowspan="2">الكود</th><th rowspan="2">المنتج</th><th colspan="2">الرصيد المتاح</th><th colspan="2">العدد المباع</th></tr><tr><th>كرتونة</th><th>قطعة</th><th>كرتونة</th><th>قطعة</th></tr></thead>
+<tbody>${body}</tbody>
+<tfoot><tr><td colspan="3">الإجمالي (${rows.length} منتج)</td><td>${fmt(tot.sc)}</td><td>${fmt(tot.sp)}</td><td>${fmt(tot.oc)}</td><td>${fmt(tot.op)}</td></tr></tfoot></table>
+</div>
+<script>
+function downloadPDF() {
+var el = document.getElementById('report-content');
+var opt = { margin: [10, 10, 10, 10], filename: '${fname}.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true }, pagebreak: { mode: ['css', 'legacy'] } };
+var ready = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+ready.then(function () { return html2pdf().set(opt).from(el).save(); }).catch(function (err) { alert('خطأ: ' + err.message); });
+}
+window.addEventListener('load', function () {
+setTimeout(function () { ${mode === 'pdf' ? 'downloadPDF()' : 'window.print()'}; }, 1200);
+});
+<\/script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
+</body>
+</html>`;
+}
+async function exportProductsReport(mode) {
+const wh = document.getElementById('pe-wh').value;
+const fromD = document.getElementById('pe-from').value;
+const toD = document.getElementById('pe-to').value;
+if (fromD && toD && fromD > toD) return toast("تاريخ البداية بعد تاريخ النهاية", true);
+const w = window.open('', '_blank', 'width=900,height=700');
+if (!w) return toast("يرجى السماح بفتح النوافذ المنبثقة", true);
+showL();
+try {
+const invRows = await fetchAllRows_(() => {
+let q = sb.from('inventory').select('warehouse_name,product_name,carton,piece');
+if (wh) q = q.eq('warehouse_name', wh);
+return q;
+});
+const salesRows = await fetchAllRows_(() => {
+let q = sb.from('sales').select('product_name,carton,piece,warehouse_name,created_at');
+if (wh) q = q.eq('warehouse_name', wh);
+if (fromD) q = q.gte('created_at', dayRangeISO(fromD).startISO);
+if (toD) q = q.lt('created_at', dayRangeISO(toD).endISO);
+return q;
+});
+const map = {};
+const get = n => (map[n] = map[n] || { name: n, code: (db.productMap[n] || {}).code || '', stockC: 0, stockP: 0, soldC: 0, soldP: 0 });
+invRows.forEach(r => { const o = get(r.product_name); o.stockC += num_(r.carton); o.stockP += num_(r.piece); });
+salesRows.forEach(r => { const o = get(r.product_name); o.soldC += num_(r.carton); o.soldP += num_(r.piece); });
+const rows = Object.values(map).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+hideL();
+if (!rows.length) { w.close(); return toast("لا توجد منتجات للتصدير", true); }
+const period = (fromD || toD) ? `${fromD || 'البداية'} إلى ${toD || 'اليوم'}` : 'كل الفترات';
+w.document.open();
+w.document.write(buildProductsReportHTML(rows, { wh: wh || 'كل المخازن', period }, mode));
+w.document.close();
+} catch (e) { try { w.close(); } catch (x) {} errH(e); }
+}
 async function saveProductListItem() {
 const listId = document.getElementById('pli-list').value;
 const product = document.getElementById('pli-prod').value;
@@ -3022,12 +3183,16 @@ if (!product) return toast("اختر منتجاً", true);
 showL();
 try {
 const { error } = await withRetry(() => sb.from('product_list_items').insert({ list_id: Number(listId), product_name: product, price, qty, profit }));
-if (error) throw error;
+if (error) {
+if (/schema cache|column/i.test(error.message || '')) throw new Error("جدول product_list_items ناقص أعمدة — شغّل كود SQL الخاص بإضافة الأعمدة في Supabase ثم جرّب تاني. (" + error.message + ")");
+throw error;
+}
 toast("تم الإضافة");
+document.getElementById('pli-code').value = '';
 document.getElementById('pli-price').value = '0';
 document.getElementById('pli-qty').value = '0';
 document.getElementById('pli-profit').value = '0';
-hideL();
+if (document.getElementById('plb-list').value === String(listId)) { await loadProductListItems(); } else { hideL(); }
 } catch (e) { errH(e); }
 }
 async function loadProductListItems() {
@@ -3040,15 +3205,108 @@ const { data, error } = await withRetry(() => sb.from('product_list_items').sele
 if (error) throw error;
 const rows = data || [];
 box.innerHTML = rows.length ? `
-<table><thead><tr><th>المنتج</th><th>السعر</th><th>العدد</th><th>الربح</th><th></th></tr></thead>
+<div style="overflow-x:auto;"><table><thead><tr><th>الكود</th><th>المنتج</th><th>السعر (قابل للتعديل)</th><th>العدد</th><th>الربح</th><th></th></tr></thead>
 <tbody>${rows.map(r => `
 <tr>
-<td>${esc(r.product_name)}</td><td>${num_(r.price).toFixed(2)}</td><td>${num_(r.qty)}</td><td>${num_(r.profit).toFixed(2)}</td>
-<td><button class="btn-danger" style="width:auto; margin:0; padding:5px 10px; font-size:11px;" onclick="deleteProductListItem(${r.id})">🗑️</button></td>
-</tr>`).join('')}</tbody></table>
+<td>${esc((db.productMap[r.product_name] || {}).code || '-')}</td><td>${esc(r.product_name)}</td>
+<td><input type="number" step="any" min="0" id="plp-${r.id}" value="${num_(r.price)}" style="width:90px; margin:0; padding:5px;"></td>
+<td>${num_(r.qty)}</td><td>${num_(r.profit).toFixed(2)}</td>
+<td><div class="btn-group" style="margin:0; flex-wrap:nowrap;"><button style="width:auto; margin:0; padding:5px 10px; font-size:11px;" onclick="updateListItemPrice(${r.id})">💾 سعر</button><button class="btn-danger" style="width:auto; margin:0; padding:5px 10px; font-size:11px;" onclick="deleteProductListItem(${r.id})">🗑️</button></div></td>
+</tr>`).join('')}</tbody></table></div>
 ` : `<p style="color:var(--muted); text-align:center;">لا يوجد منتجات</p>`;
 hideL();
 } catch (e) { errH(e); }
+}
+async function updateListItemPrice(id) {
+const el = document.getElementById('plp-' + id);
+if (!el) return;
+const price = num_(el.value);
+showL();
+try {
+const { data, error } = await withRetry(() => sb.from('product_list_items').update({ price }).eq('id', id).select());
+if (error) throw error;
+if (!data || !data.length) throw new Error("تعذر تعديل السعر (راجع صلاحيات UPDATE للجدول في Supabase)");
+toast("تم تعديل السعر");
+hideL();
+} catch (e) { errH(e); }
+}
+function buildListPageHTML(listName, rows, mode) {
+const hasQty = rows.some(r => num_(r.qty) > 0);
+const body = rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc((db.productMap[r.product_name] || {}).code || '-')}</td><td style="text-align:right">${esc(r.product_name)}</td><td>${num_(r.price).toFixed(2)}</td>${hasQty ? `<td>${num_(r.qty)}</td>` : ''}</tr>`).join('');
+const dateStr = new Date().toLocaleDateString('ar-EG');
+const fname = ('ليستة_' + listName).replace(/[\\/:*?"<>|\s]+/g, '_');
+return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>${esc(listName)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+@page { size: A4 portrait; margin: 15mm 10mm; }
+body { background: white; color: black; font-size: 13px; line-height: 1.5; }
+.toolbar { background: #f5f5f5; padding: 10px; border-bottom: 1px solid #ddd; display: flex; gap: 10px; justify-content: center; position: sticky; top: 0; }
+.toolbar button { padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: bold; }
+.wrap { max-width: 800px; margin: 20px auto; padding: 20px; background: white; }
+.header { text-align: center; border-bottom: 3px double #000; padding-bottom: 15px; margin-bottom: 20px; }
+.header h1 { font-size: 28px; margin-bottom: 4px; }
+.title { font-size: 16px; color: #444; margin: 4px 0 12px; font-weight: 600; }
+.shop-row { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.shop-sub { font-size: 12px; color: #333; margin: 2px 0; }
+.date { font-size: 13px; color: #333; margin-top: 10px; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; text-align: center; }
+th, td { border: 1px solid #000; padding: 7px 6px; }
+th { background: #eee; }
+tr { page-break-inside: avoid; }
+@media print { .toolbar { display: none !important; } .wrap { margin: 0; padding: 0; max-width: 100%; } }
+</style>
+</head>
+<body>
+<div class="toolbar"><button style="background:#2563eb;color:#fff" onclick="window.print()">🖨️ طباعة</button><button style="background:#16a34a;color:#fff" onclick="downloadPDF()">📄 حفظ PDF</button></div>
+<div class="wrap" id="list-content">
+<div class="header">
+<h1>أبو يونس</h1>
+<div class="title">${esc(listName)}</div>
+<div class="shop-row">
+<div><p class="shop-sub"><strong>الإدارة:</strong> علاء اسامة</p><p class="shop-sub"><strong>الهاتف:</strong> 01009253287 - 01114660510</p></div>
+<div><p class="shop-sub"><strong>العنوان:</strong> تلبنت قيصر بجوار مسجد سعد رسلان</p></div>
+</div>
+<p class="date">التاريخ: ${esc(dateStr)}</p>
+</div>
+<table><thead><tr><th>م</th><th>الكود</th><th>المنتج</th><th>السعر</th>${hasQty ? '<th>العدد</th>' : ''}</tr></thead><tbody>${body}</tbody></table>
+</div>
+<script>
+function downloadPDF() {
+var el = document.getElementById('list-content');
+var opt = { margin: [10, 10, 10, 10], filename: '${fname}.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true } };
+var ready = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+ready.then(function () { return html2pdf().set(opt).from(el).save(); }).catch(function (err) { alert('خطأ: ' + err.message); });
+}
+window.addEventListener('load', function () {
+setTimeout(function () { ${mode === 'pdf' ? 'downloadPDF()' : 'window.print()'}; }, 1200);
+});
+<\/script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
+</body>
+</html>`;
+}
+async function exportProductList(mode) {
+const listId = document.getElementById('plb-list').value;
+if (!listId) return toast("اختر الليستة أولاً", true);
+const listName = (document.getElementById('plb-list').selectedOptions[0] || {}).text || 'ليستة';
+const w = window.open('', '_blank', 'width=900,height=700');
+if (!w) return toast("يرجى السماح بفتح النوافذ المنبثقة", true);
+showL();
+try {
+const { data, error } = await withRetry(() => sb.from('product_list_items').select('*').eq('list_id', Number(listId)).order('id'));
+if (error) throw error;
+const rows = data || [];
+hideL();
+if (!rows.length) { w.close(); return toast("الليستة فاضية", true); }
+w.document.open();
+w.document.write(buildListPageHTML(listName, rows, mode));
+w.document.close();
+} catch (e) { try { w.close(); } catch (x) {} errH(e); }
 }
 async function deleteProductListItem(id) {
 const ok = await confirmModal("حذف هذا المنتج؟");
