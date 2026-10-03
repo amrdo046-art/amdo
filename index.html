@@ -1067,7 +1067,7 @@ document.getElementById('stk-prod').innerHTML = prOpts;
 document.getElementById('pt-product').innerHTML = prOpts;
 document.getElementById('pp-prod').innerHTML = prOpts;
 populateProductCodesDatalist();
-document.getElementById('del-pr-select').innerHTML = buildProductOptions(db.products, false) || '<option value="">لا يوجد منتجات</option>';
+document.getElementById('del-pr-select').innerHTML = buildProductOptions(Array.from(new Set([...(db.products || []), ...Object.keys(db.productMap || {})])).sort(), false) || '<option value="">لا يوجد منتجات</option>';
 document.querySelectorAll('.pr-sel').forEach(el => { const v=el.value; el.innerHTML=prOpts; el.value=v; });
 document.getElementById('clients-datalist').innerHTML = db.clients.map(c => `<option value="${esc(c.name)}"></option>`).join('');
 populateAgentsDatalist();
@@ -1973,19 +1973,21 @@ await refreshDataOnly();
 async function deleteProduct() {
 const name = document.getElementById('del-pr-select').value;
 if (!name) return toast("اختر منتجاً", true);
-const ok = await confirmModal(`حذف منتج "${name}" من كل المخازن؟`);
+const ok = await confirmModal(`حذف منتج "${name}" نهائياً من كل المخازن والسجلات وقوائم المنتجات؟`);
 if (!ok) return;
 showL();
 try {
-const { data, error } = await withRetry(() => sb.from('inventory').delete().eq('product_name', name).select());
-if (error) throw error;
-assertDeleted(data, "المنتج");
-try { await withRetry(() => sb.from('products').delete().eq('name', name)); } catch (pErr) {}
-try { await withRetry(() => sb.from('inventory_log').delete().eq('product_name', name)); } catch (e) {}
-try { await withRetry(() => sb.from('returns_log').delete().eq('product_name', name)); } catch (e) {}
-toast("تم حذف المنتج بنجاح");
+const { data, error } = await withRetry(() => sb.rpc('rpc_delete_product', { p_product: name }));
+if (error) {
+if (/PGRST202|could not find the function/i.test((error.code || '') + (error.message || ''))) throw new Error('دالة الحذف مش موجودة في Supabase. شغّل ملف delete_product_function.sql في SQL Editor الأول.');
+throw error;
+}
+const total = data ? Object.values(data).reduce((x, y) => x + num_(y), 0) : 0;
+if (!total) throw new Error('المنتج مش موجود في أي جدول.');
+toast("تم حذف المنتج نهائياً من كل مكان");
 closeModal('modal-delprod');
 await refreshDataOnly();
+loadLowStockAlerts();
 } catch (e) { errH(e); }
 }
 const BALANCE_SYNC_MIN_INTERVAL_MS = 180000;
@@ -3162,7 +3164,9 @@ return q;
 const map = {};
 const get = n => (map[n] = map[n] || { name: n, code: (db.productMap[n] || {}).code || '', stockC: 0, stockP: 0, soldC: 0, soldP: 0 });
 invRows.forEach(r => { const o = get(r.product_name); o.stockC += num_(r.carton); o.stockP += num_(r.piece); });
-salesRows.forEach(r => { const o = get(r.product_name); o.soldC += num_(r.carton); o.soldP += num_(r.piece); });
+/* المنتج المحذوف (مش في المخزون ولا في جدول products) ميظهرش في التقرير حتى لو ليه مبيعات قديمة */
+const liveNames = new Set([...invRows.map(r => r.product_name), ...Object.keys(db.productMap || {})]);
+salesRows.forEach(r => { if (!liveNames.has(r.product_name)) return; const o = get(r.product_name); o.soldC += num_(r.carton); o.soldP += num_(r.piece); });
 const rows = Object.values(map).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
 hideL();
 if (!rows.length) { w.close(); return toast("لا توجد منتجات للتصدير", true); }
